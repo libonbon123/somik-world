@@ -1,0 +1,2961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Somik World V4.1 Balanced</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{background:#0c140e;color:#fff;font-family:Arial,sans-serif}
+#app{display:flex;width:100vw;height:100vh}
+#side{
+  width:350px;min-width:350px;height:100vh;overflow-y:auto;padding:8px;
+  background:linear-gradient(90deg,#452613,#80502f,#452613);
+  border-right:5px solid #241207
+}
+.panel{
+  margin-bottom:7px;padding:8px;border:3px solid #2a160b;border-radius:8px;
+  background:linear-gradient(#895633,#613b21);
+  box-shadow:inset 0 0 0 2px #a97852,2px 3px 7px #0008
+}
+.title{text-align:center;font-size:22px;font-weight:bold;letter-spacing:2px}
+.sub{text-align:center;font-size:10px;color:#f1d4b7}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.stat,.row{font-size:10px;background:#24140a99;padding:4px 5px;border-radius:4px}
+h2{font-size:13px;margin:0 0 5px}
+button{
+  border:2px solid #39200e;background:#da9b55;color:#28150b;
+  border-radius:5px;font-weight:bold;padding:4px 7px;cursor:pointer
+}
+button:hover{background:#f0ba72}
+button.active{background:#ffe487;box-shadow:0 0 0 2px #fff6}
+#controls{display:flex;gap:3px;flex-wrap:wrap}
+#gameArea{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#world{border:4px solid #28160c;max-width:100%;max-height:100vh}
+#chart,#brain{width:100%;background:#13231a;border:2px solid #301b0e}
+#chart{height:90px}
+#brain{height:120px}
+#log{height:70px;overflow:auto;font-size:9px;line-height:1.3}
+#inspect,#family{font-size:10px;line-height:1.25}
+.hint{font-size:9px;color:#f0d4b7;margin-bottom:5px}
+.good{color:#9cff91}.bad{color:#ff9e91}
+#extinction{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#07100bd9;z-index:10;text-align:center} #extinction.show{display:flex} #extinctionBox{background:#2a160be8;border:4px solid #8a5935;border-radius:14px;padding:26px 38px;box-shadow:0 12px 50px #000b} #extinctionTitle{font-size:38px;font-weight:900;color:#ffb08e} #extinctionInfo{margin-top:10px;font-size:15px;line-height:1.6}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+<div id="side">
+
+<div class="panel">
+  <div class="title">SOMIK WORLD</div>
+  <div class="sub">EVOLUTION LAB V4.2 • AUTOSAVE</div>
+</div>
+
+<div class="panel">
+<div id="controls">
+  <button id="pause">Pause</button>
+  <button class="speed active" data-speed="1">1x</button>
+  <button class="speed" data-speed="5">5x</button>
+  <button class="speed" data-speed="20">20x</button>
+  <button class="speed" data-speed="100">100x</button>
+  <button id="follow">Follow</button>
+  <button id="save">Save</button>
+  <button id="load">Load</button>
+</div>
+<div id="autosaveStatus" style="margin-top:7px;padding:6px 8px;background:#24140a99;border-radius:5px;font-size:10px;line-height:1.45">💾 Auto Save: <b style="color:#9cff91">ON</b> • every 5s<br>Last save: <span id="lastSave">waiting...</span></div>
+</div>
+
+<div class="panel">
+<div class="stats">
+  <div class="stat">🔵 Somiks <span id="pop"></span>/30</div>
+  <div class="stat">🐔 Chickens <span id="chickens"></span></div>
+  <div class="stat">🧬 Max Gen <span id="gen"></span></div>
+  <div class="stat">🧬 Species <span id="species"></span></div>
+  <div class="stat">❤️ Avg Health <span id="health"></span></div>
+  <div class="stat">⚡ Avg Energy <span id="energy"></span></div>
+  <div class="stat">💧 Avg Water <span id="water"></span></div>
+  <div class="stat">🧠 Avg Brain <span id="brainSize"></span></div>
+  <div class="stat">🫐 Berries <span id="berries"></span></div>
+  <div class="stat">🌱 Seeds <span id="seeds"></span></div>
+  <div class="stat">🔥 Heat <span id="heat"></span></div>
+  <div class="stat">🦠 Sick <span id="sick"></span></div>
+  <div class="stat">🍂 Season <span id="season"></span></div>
+  <div class="stat">🌦 Weather <span id="weather"></span></div>
+  <div class="stat">🌡 Temp <span id="temp"></span></div>
+  <div class="stat">📅 Day <span id="day"></span></div>
+  <div class="stat">👶 Births <span id="birthCount"></span></div>
+  <div class="stat">💀 Deaths <span id="deathCount"></span></div>
+  <div class="stat">📈 Peak Pop <span id="peakPop"></span></div>
+  <div class="stat">🏁 Highest Gen <span id="highestGen"></span></div>
+</div>
+</div>
+
+<div class="panel">
+<h2>📈 EVOLUTION</h2>
+<canvas id="chart" width="320" height="90"></canvas>
+</div>
+
+<div class="panel">
+<h2>🧠 BRAIN VIEWER</h2>
+<canvas id="brain" width="320" height="120"></canvas>
+</div>
+
+<div class="panel">
+<h2>🔍 SELECTED SOMIK</h2>
+<div class="hint">Click a Somik. Information is hidden above the others.</div>
+<div id="inspect">No Somik selected.</div>
+</div>
+
+<div class="panel">
+<h2>🌳 FAMILY</h2>
+<div id="family">Select a Somik.</div>
+</div>
+
+<div class="panel">
+<h2>📜 LOG</h2>
+<div id="log"></div>
+</div>
+
+</div>
+
+<div id="gameArea" style="position:relative">
+<canvas id="world" width="1100" height="650"></canvas>
+<div id="extinction"><div id="extinctionBox"><div id="extinctionTitle">EXTINCTION</div><div id="extinctionInfo"></div></div></div>
+</div>
+
+</div>
+
+<script>
+"use strict";
+
+// ============================================================
+// CONFIG
+// ============================================================
+
+const C={
+W:1100,H:650,
+
+START_SOMIKS:20,
+MAX_POP:30,
+
+START_CHICKENS:7,
+MAX_CHICKENS:14,
+
+START_BUSHES:48,
+START_SEEDS:22,
+START_BLOCKS:38,
+START_TREES:26,
+START_WOOD:18,
+START_STONE:22,
+START_MINERALS:14,
+
+MAX_BUSHES:125,
+
+MAX_ENERGY:180,
+START_ENERGY:145,
+
+MAX_WATER:100,
+START_WATER:100,
+
+MAX_HEALTH:100,
+
+BERRY_ENERGY:48,
+CHICKEN_FOOD_ENERGY:72,
+
+LIFE_COST:.00072,
+MOVE_COST:.00165,
+CARRY_COST:.00065,
+WATER_LOSS:.00072,
+
+ADULT_AGE:700,
+
+REPRO_ENERGY:145,
+REPRO_COST:55,
+REPRO_COOLDOWN:1650,
+
+MUTATION_RATE:.08,
+MUTATION_POWER:.14,
+RARE_MUTATION:.012,
+
+DAY_LENGTH:7200,
+SEASON_LENGTH:18000,
+
+SEED_GROW:1500,
+BERRY_GROW:430,
+
+HEAT_RADIUS:90,
+HEAT_LIFE:4200,
+
+WEATHER_MIN:1500,
+WEATHER_MAX:3300,
+
+HISTORY_EVERY:150
+};
+
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const chance=p=>Math.random()<p;
+const distance=(x1,y1,x2,y2)=>Math.hypot(x2-x1,y2-y1);
+
+function mix(a,b,t=.5){return a*(1-t)+b*t}
+
+// ============================================================
+// MAP OBJECTS
+// ============================================================
+
+class Water{
+constructor(x,y,w,h){
+ this.x=x;this.y=y;this.w=w;this.h=h;
+}
+contains(x,y,p=0){
+ return x>this.x-p&&x<this.x+this.w+p&&
+        y>this.y-p&&y<this.y+this.h+p;
+}
+}
+
+class Patch{
+constructor(x,y,rx,ry,type,seed){
+ this.x=x;this.y=y;this.rx=rx;this.ry=ry;
+ this.type=type;this.seed=seed;
+}
+contains(x,y){
+ const dx=(x-this.x)/this.rx;
+ const dy=(y-this.y)/this.ry;
+
+ // irregular edge rather than perfect circle
+ const a=Math.atan2(dy,dx);
+ const wobble=
+   1+
+   Math.sin(a*3+this.seed)*.12+
+   Math.sin(a*7-this.seed)*.07;
+
+ return dx*dx+dy*dy < wobble*wobble;
+}
+}
+
+class Bush{
+constructor(x,y){
+ this.x=x;this.y=y;
+ this.berries=Math.floor(rand(2,6));
+ this.timer=rand(0,C.BERRY_GROW);
+}
+update(w){
+ if(this.berries>=5)return;
+
+ this.timer--;
+
+ let target=C.BERRY_GROW;
+
+ if(w.weather==="Rain")target*=.75;
+ if(w.nearWater(this.x,this.y,85))target*=.85;
+ if(w.season()==="Spring")target*=.78;
+ if(w.season()==="Winter")target*=1.55;
+ if(w.drought>0)target*=1.8;
+
+ if(this.timer<=0){
+   this.berries++;
+   this.timer=target;
+ }
+}
+}
+
+class Seed{
+constructor(x,y){
+ this.x=x;this.y=y;
+ this.age=0;
+ this.carriedBy=null;
+}
+}
+
+class Block{
+constructor(x,y){
+ this.x=x;this.y=y;
+ this.size=18;
+ this.carriedBy=null;
+}
+}
+
+class Resource{
+constructor(x,y,type){
+ this.x=x;this.y=y;
+ this.type=type;
+ this.carriedBy=null;
+}
+}
+
+class Tree{
+constructor(x,y){
+ this.x=x;this.y=y;
+ this.timer=rand(1800,3800);
+}
+update(w){
+ this.timer--;
+ if(this.timer>0)return;
+
+ this.timer=rand(2000,4000);
+
+ if(w.wood.length>48)return;
+
+ const p=w.landNear(this.x,this.y,28);
+
+ if(p){
+   w.wood.push(new Resource(p.x,p.y,"wood"));
+ }
+}
+}
+
+class Heat{
+constructor(x,y){
+ this.x=x;this.y=y;
+ this.life=C.HEAT_LIFE;
+}
+update(){this.life--}
+}
+
+// ============================================================
+// CHICKENS
+//
+// Fictional non-graphic game creatures.
+// They have simple local movement/avoidance.
+// Somiks do NOT receive a hunt/chase/ambush command.
+// ============================================================
+
+class Chicken{
+constructor(world,x,y){
+ this.world=world;
+ this.x=x;this.y=y;
+
+ const a=rand(0,Math.PI*2);
+ this.dx=Math.cos(a);
+ this.dy=Math.sin(a);
+
+ this.energy=100;
+ this.age=0;
+ this.turn=0;
+ this.reproduceTimer=rand(4000,8000);
+}
+
+update(){
+ this.age++;
+ this.turn--;
+
+ if(this.turn<=0){
+   this.turn=rand(30,100);
+
+   const a=rand(0,Math.PI*2);
+   this.dx=Math.cos(a);
+   this.dy=Math.sin(a);
+ }
+
+ // Basic local avoidance only.
+ let closest=null;
+ let closestD=65;
+
+ for(const s of this.world.somiks){
+   const d=distance(this.x,this.y,s.x,s.y);
+
+   if(d<closestD){
+     closest=s;
+     closestD=d;
+   }
+ }
+
+ if(closest){
+   const dx=this.x-closest.x;
+   const dy=this.y-closest.y;
+   const l=Math.hypot(dx,dy)||1;
+
+   this.dx=dx/l;
+   this.dy=dy/l;
+ }
+
+ let speed=closest?1.25:.62;
+
+ const nx=clamp(this.x+this.dx*speed,10,C.W-10);
+ const ny=clamp(this.y+this.dy*speed,10,C.H-10);
+
+ if(!this.world.isWater(nx,ny,6)){
+   this.x=nx;
+   this.y=ny;
+ }else{
+   this.turn=0;
+ }
+
+ // Chickens occasionally consume a nearby berry.
+ for(const b of this.world.bushes){
+   if(b.berries>0&&distance(this.x,this.y,b.x,b.y)<16){
+     if(chance(.006)){
+       b.berries--;
+       this.energy=Math.min(120,this.energy+12);
+     }
+     break;
+   }
+ }
+
+ this.energy-=.001;
+ this.reproduceTimer--;
+
+ if(
+   this.reproduceTimer<=0 &&
+   this.world.chickens.length+
+   this.world.newChickens.length<C.MAX_CHICKENS &&
+   this.energy>70
+ ){
+   const p=this.world.landNear(this.x,this.y,30);
+
+   if(p){
+     this.world.newChickens.push(
+       new Chicken(this.world,p.x,p.y)
+     );
+
+     this.energy-=25;
+   }
+
+   this.reproduceTimer=rand(5000,9000);
+ }
+}
+}
+
+// ============================================================
+// GENOME
+// ============================================================
+
+class Genome{
+constructor(a=null,b=null){
+
+ if(a){
+
+   const parent2=b||a;
+
+   this.vision=this.gene(a,parent2,"vision",110,250,12);
+   this.speed=this.gene(a,parent2,"speed",.72,1.45,.07);
+   this.signalRange=this.gene(a,parent2,"signalRange",50,190,10);
+   this.smell=this.gene(a,parent2,"smell",25,140,8);
+
+   this.coldResistance=this.gene(a,parent2,"coldResistance",0,1,.08);
+   this.heatResistance=this.gene(a,parent2,"heatResistance",0,1,.08);
+   this.diseaseResistance=this.gene(a,parent2,"diseaseResistance",0,1,.08);
+
+   this.lifeSpan=this.gene(a,parent2,"lifeSpan",10000,30000,900);
+   this.learningRate=this.gene(a,parent2,"learningRate",0,.02,.002);
+
+   this.hidden=Math.round(
+     this.gene(a,parent2,"hidden",12,30,1)
+   );
+
+   if(chance(C.RARE_MUTATION)){
+     this.hidden+=Math.round(rand(-3,4));
+     this.vision+=rand(-30,30);
+     this.lifeSpan+=rand(-2000,2500);
+   }
+
+ }else{
+
+   this.vision=rand(145,205);
+   this.speed=rand(.92,1.18);
+   this.signalRange=rand(80,135);
+   this.smell=rand(45,90);
+
+   this.coldResistance=rand(.2,.7);
+   this.heatResistance=rand(.2,.7);
+   this.diseaseResistance=rand(.2,.7);
+
+   this.lifeSpan=rand(15000,23000);
+   this.learningRate=rand(.001,.006);
+
+   this.hidden=Math.floor(rand(15,22));
+ }
+
+ this.hidden=Math.round(clamp(this.hidden,12,30));
+ this.vision=clamp(this.vision,110,250);
+ this.speed=clamp(this.speed,.72,1.45);
+ this.lifeSpan=clamp(this.lifeSpan,10000,30000);
+}
+
+gene(a,b,key,min,max,power){
+
+ let value=chance(.5)?a[key]:b[key];
+
+ if(chance(.28)){
+   value+=rand(-power,power);
+ }
+
+ return clamp(value,min,max);
+}
+}
+
+// ============================================================
+// BRAIN
+// ============================================================
+
+class Brain{
+
+static INPUTS=64;
+static MEMORY=6;
+static OUTPUTS=13;
+
+constructor(hidden=18,parentA=null,parentB=null){
+
+ this.hidden=hidden;
+
+ if(parentA){
+
+   this.w1=this.inherit(
+     parentA.w1,
+     parentB?parentB.w1:parentA.w1,
+     hidden,
+     Brain.INPUTS+Brain.MEMORY+1
+   );
+
+   this.w2=this.inherit(
+     parentA.w2,
+     parentB?parentB.w2:parentA.w2,
+     Brain.OUTPUTS+Brain.MEMORY,
+     hidden+1
+   );
+
+ }else{
+
+   this.w1=this.randomMatrix(
+     hidden,
+     Brain.INPUTS+Brain.MEMORY+1
+   );
+
+   this.w2=this.randomMatrix(
+     Brain.OUTPUTS+Brain.MEMORY,
+     hidden+1
+   );
+ }
+}
+
+randomMatrix(rows,cols){
+ return Array.from({length:rows},()=>
+   Array.from({length:cols},()=>rand(-1,1))
+ );
+}
+
+inherit(a,b,rows,cols){
+
+ const result=[];
+
+ for(let r=0;r<rows;r++){
+
+   const row=[];
+
+   for(let c=0;c<cols;c++){
+
+     let v;
+
+     const av=a[r]?.[c];
+     const bv=b[r]?.[c];
+
+     if(av!==undefined&&bv!==undefined){
+       v=chance(.5)?av:bv;
+     }else if(av!==undefined){
+       v=av;
+     }else if(bv!==undefined){
+       v=bv;
+     }else{
+       v=rand(-1,1);
+     }
+
+     if(chance(C.MUTATION_RATE)){
+       v+=rand(-C.MUTATION_POWER,C.MUTATION_POWER);
+     }
+
+     if(chance(C.RARE_MUTATION)){
+       v+=rand(-.55,.55);
+     }
+
+     row.push(clamp(v,-3,3));
+   }
+
+   result.push(row);
+ }
+
+ return result;
+}
+
+layer(inputs,matrix){
+
+ const out=[];
+
+ for(const row of matrix){
+
+   let sum=row[row.length-1];
+
+   for(let i=0;i<inputs.length;i++){
+     sum+=inputs[i]*row[i];
+   }
+
+   out.push(Math.tanh(sum));
+ }
+
+ return out;
+}
+
+think(inputs,memory){
+
+ const h=this.layer(inputs.concat(memory),this.w1);
+ const r=this.layer(h,this.w2);
+
+ return{
+   hidden:h,
+   outputs:r.slice(0,Brain.OUTPUTS),
+   memory:r.slice(
+     Brain.OUTPUTS,
+     Brain.OUTPUTS+Brain.MEMORY
+   )
+ };
+}
+
+// tiny lifetime plasticity
+learn(index,amount,rate){
+
+ if(!rate)return;
+
+ for(let r=0;r<this.w2.length;r++){
+
+   if(this.w2[r][index]!==undefined){
+     this.w2[r][index]=clamp(
+       this.w2[r][index]+amount*rate,
+       -3,3
+     );
+   }
+ }
+}
+}
+
+// ============================================================
+// SOMIK
+// ============================================================
+
+class Somik{
+
+constructor(
+ world,x,y,
+ genome=null,
+ brain=null,
+ generation=1,
+ parentA=null,
+ parentB=null,
+ founder=null
+){
+
+ this.world=world;
+ this.id=world.nextID++;
+
+ this.x=x;this.y=y;
+
+ this.genome=genome||new Genome();
+ this.brain=brain||new Brain(this.genome.hidden);
+
+ this.generation=generation;
+
+ this.parentA=parentA;
+ this.parentB=parentB;
+
+ this.founder=founder===null?this.id:founder;
+
+ this.energy=C.START_ENERGY;
+ this.water=C.START_WATER;
+ this.health=C.MAX_HEALTH;
+
+ this.age=0;
+
+ this.children=0;
+ this.foodEaten=0;
+ this.chickensCaught=0;
+
+ this.sick=0;
+
+ this.carrying=null;
+
+ this.memory=Array(Brain.MEMORY).fill(0);
+ this.longMemory=[0,0,0,0];
+
+ this.outputs=Array(Brain.OUTPUTS).fill(0);
+ this.hiddenActivity=[];
+
+ this.signals=[0,0,0];
+ this.heard=[0,0,0];
+
+ this.state="Idle";
+
+ this.reproCooldown=C.REPRO_COOLDOWN;
+
+ this.decisionTimer=0;
+
+ const a=rand(0,Math.PI*2);
+
+ this.fx=Math.cos(a);
+ this.fy=Math.sin(a);
+
+ this.prevX=0;
+ this.prevY=0;
+
+ this.lastEnergy=this.energy;
+}
+
+adult(){
+ return this.age>=C.ADULT_AGE;
+}
+
+nearest(list,filter=null,range=this.genome.vision){
+
+ let best=null;
+ let bestD=range;
+
+ for(const o of list){
+
+   if(filter&&!filter(o))continue;
+
+   const d=distance(this.x,this.y,o.x,o.y);
+
+   if(d<bestD){
+     best=o;
+     bestD=d;
+   }
+ }
+
+ return{object:best,distance:bestD};
+}
+
+direction(r,range=this.genome.vision){
+
+ if(!r.object)return[0,0,0];
+
+ return[
+   (r.object.x-this.x)/range,
+   (r.object.y-this.y)/range,
+   1-r.distance/range
+ ];
+}
+
+hear(){
+
+ this.heard=[0,0,0];
+ const weights=[0,0,0];
+
+ for(const o of this.world.somiks){
+
+   if(o===this)continue;
+
+   const d=distance(this.x,this.y,o.x,o.y);
+   const range=Math.min(
+     this.genome.signalRange,
+     o.genome.signalRange
+   );
+
+   if(d>=range)continue;
+
+   const weight=1-d/range;
+
+   for(let i=0;i<3;i++){
+     this.heard[i]+=o.signals[i]*weight;
+     weights[i]+=weight;
+   }
+ }
+
+ for(let i=0;i<3;i++){
+   if(weights[i])this.heard[i]/=weights[i];
+   this.heard[i]=clamp(this.heard[i],-1,1);
+ }
+}
+
+geneticSimilarity(other){
+
+ if(!other)return 0;
+
+ const a=this.genome;
+ const b=other.genome;
+
+ const differences=[
+   Math.abs(a.vision-b.vision)/140,
+   Math.abs(a.speed-b.speed)/.73,
+   Math.abs(a.hidden-b.hidden)/18,
+   Math.abs(a.coldResistance-b.coldResistance),
+   Math.abs(a.heatResistance-b.heatResistance),
+   Math.abs(a.lifeSpan-b.lifeSpan)/13000
+ ];
+
+ const avg=differences.reduce((x,y)=>x+y,0)/differences.length;
+
+ return clamp(1-avg,0,1);
+}
+
+sense(){
+
+ this.hear();
+
+ const berry=this.direction(
+   this.nearest(this.world.bushes,b=>b.berries>0)
+ );
+
+ const seed=this.direction(
+   this.nearest(this.world.seeds,s=>!s.carriedBy)
+ );
+
+ const block=this.direction(
+   this.nearest(this.world.blocks,b=>!b.carriedBy)
+ );
+
+ const wood=this.direction(
+   this.nearest(this.world.wood,r=>!r.carriedBy)
+ );
+
+ const mineral=this.direction(
+   this.nearest(this.world.minerals,r=>!r.carriedBy)
+ );
+
+ const heat=this.direction(
+   this.nearest(this.world.heat)
+ );
+
+ const chickenResult=this.nearest(this.world.chickens);
+ const chicken=this.direction(chickenResult);
+
+ const otherResult=this.nearest(
+   this.world.somiks,
+   s=>s!==this
+ );
+
+ const other=this.direction(otherResult);
+
+ const similarity=this.geneticSimilarity(otherResult.object);
+
+ const terrain=this.world.terrainAt(this.x,this.y);
+
+ const waterAhead=this.world.waterProbe(this,0,32);
+ const waterLeft=this.world.waterProbe(this,-.7,30);
+ const waterRight=this.world.waterProbe(this,.7,30);
+
+ const smellFood=this.nearest(
+   this.world.bushes,
+   b=>b.berries>0,
+   this.genome.smell
+ );
+
+ const smell=
+   smellFood.object
+   ?1-smellFood.distance/this.genome.smell
+   :0;
+
+ const t=this.world.timeFraction();
+ const angle=t*Math.PI*2;
+
+ const lifeProgress=this.age/this.genome.lifeSpan;
+
+ const inputs=[
+
+   this.energy/C.MAX_ENERGY,
+   this.water/C.MAX_WATER,
+   this.health/C.MAX_HEALTH,
+
+   lifeProgress,
+   this.adult()?1:0,
+   this.sick>0?1:0,
+   this.carrying?1:0,
+
+   ...berry,
+   ...seed,
+   ...block,
+   ...wood,
+   ...mineral,
+   ...heat,
+   ...chicken,
+   ...other,
+
+   similarity,
+
+   waterAhead,
+   waterLeft,
+   waterRight,
+
+   terrain==="mud"?1:0,
+   terrain==="sand"?1:0,
+   terrain==="hill"?1:0,
+
+   this.world.daylight(),
+   Math.sin(angle),
+   Math.cos(angle),
+
+   this.world.temperatureNormalized(),
+
+   this.world.weather==="Rain"?1:0,
+   this.world.weather==="Storm"?1:0,
+   this.world.drought>0?1:0,
+   this.world.flood>0?1:0,
+
+   this.heard[0],
+   this.heard[1],
+   this.heard[2],
+
+   smell,
+
+   this.prevX,
+   this.prevY,
+
+   this.longMemory[0],
+   this.longMemory[1],
+   this.longMemory[2],
+   this.longMemory[3],
+
+   this.world.dangerAt(this.x,this.y),
+
+   rand(-1,1)
+ ];
+
+ while(inputs.length<Brain.INPUTS)inputs.push(0);
+ inputs.length=Brain.INPUTS;
+
+ return inputs;
+}
+
+think(){
+
+ this.decisionTimer--;
+
+ if(this.decisionTimer>0)return;
+
+ const r=this.brain.think(
+   this.sense(),
+   this.memory
+ );
+
+ this.outputs=r.outputs;
+ this.memory=r.memory;
+ this.hiddenActivity=r.hidden;
+
+ this.signals=[
+   this.outputs[8],
+   this.outputs[9],
+   this.outputs[10]
+ ];
+
+ // Signals cost energy.
+ this.energy-=(
+   Math.abs(this.signals[0])+
+   Math.abs(this.signals[1])+
+   Math.abs(this.signals[2])
+ )*.00015;
+
+ this.decisionTimer=Math.floor(rand(14,34));
+}
+
+bridgeSupport(x,y){
+
+ for(const b of this.world.blocks){
+
+   if(b.carriedBy)continue;
+   if(!this.world.baseWater(b.x,b.y))continue;
+
+   if(
+     Math.abs(x-b.x)<18 &&
+     Math.abs(y-b.y)<18
+   )return true;
+ }
+
+ return false;
+}
+
+move(dx,dy){
+
+ const l=Math.hypot(dx,dy);
+ if(l<.08)return;
+
+ dx/=l;dy/=l;
+
+ this.fx=dx;this.fy=dy;
+ this.prevX=dx;this.prevY=dy;
+
+ let speed=this.genome.speed;
+
+ const terrain=this.world.terrainAt(this.x,this.y);
+
+ if(terrain==="mud")speed*=.58;
+ if(terrain==="sand")speed*=.8;
+ if(terrain==="hill")speed*=.72;
+
+ if(this.carrying)speed*=.8;
+
+ const nx=clamp(this.x+dx*speed,10,C.W-10);
+ const ny=clamp(this.y+dy*speed,10,C.H-10);
+
+ if(
+   (!this.world.isWater(nx,ny,6)||this.bridgeSupport(nx,ny))
+ ){
+   this.x=nx;
+   this.y=ny;
+ }
+
+ let cost=C.MOVE_COST;
+
+ cost*=.8+this.genome.speed*.28;
+ cost*=.85+this.genome.vision/500;
+
+ this.energy-=cost;
+ this.water-=.001;
+
+ this.state="Moving";
+}
+
+pick(){
+
+ if(this.carrying)return;
+
+ const objects=[];
+
+ const add=(arr,type)=>{
+   for(const o of arr){
+     if(!o.carriedBy)objects.push({o,type});
+   }
+ };
+
+ add(this.world.seeds,"seed");
+ add(this.world.blocks,"block");
+ add(this.world.wood,"wood");
+ add(this.world.stone,"stone");
+ add(this.world.minerals,"mineral");
+
+ let best=null;
+ let bestD=24;
+
+ for(const item of objects){
+
+   const d=distance(
+     this.x,this.y,
+     item.o.x,item.o.y
+   );
+
+   if(d<bestD){
+     bestD=d;
+     best=item;
+   }
+ }
+
+ if(!best)return;
+
+ best.o.carriedBy=this;
+ this.carrying=best;
+
+ this.state="Carrying "+best.type;
+}
+
+drop(){
+
+ if(!this.carrying)return;
+
+ const o=this.carrying.o;
+
+ const x=clamp(this.x+this.fx*25,8,C.W-8);
+ const y=clamp(this.y+this.fy*25,8,C.H-8);
+
+ if(
+   this.carrying.type==="seed" &&
+   this.world.isWater(x,y,5)
+ )return;
+
+ o.x=x;o.y=y;
+ o.carriedBy=null;
+
+ if(this.carrying.type==="seed")o.age=0;
+
+ this.carrying=null;
+ this.state="Dropped object";
+}
+
+eatBerries(){
+
+ for(const b of this.world.bushes){
+
+   if(
+     b.berries>0 &&
+     distance(this.x,this.y,b.x,b.y)<21
+   ){
+
+     b.berries--;
+
+     this.energy=Math.min(
+       C.MAX_ENERGY,
+       this.energy+C.BERRY_ENERGY
+     );
+
+     this.foodEaten++;
+
+     if(chance(.12)){
+       const p=this.world.landNear(this.x,this.y,20);
+       if(p)this.world.seeds.push(new Seed(p.x,p.y));
+     }
+
+     this.state="Eating";
+     return true;
+   }
+ }
+
+ return false;
+}
+
+interactChicken(){
+
+ // Generic interact only.
+ // No hunt/chase/ambush action exists.
+
+ if(this.outputs[11]<.65)return;
+
+ let closest=null;
+ let closestD=15;
+
+ for(const c of this.world.chickens){
+
+   const d=distance(this.x,this.y,c.x,c.y);
+
+   if(d<closestD){
+     closest=c;
+     closestD=d;
+   }
+ }
+
+ if(!closest)return;
+
+ // Abstract game capture.
+ this.world.remove(this.world.chickens,closest);
+
+ this.energy=Math.min(
+   C.MAX_ENERGY,
+   this.energy+C.CHICKEN_FOOD_ENERGY
+ );
+
+ this.chickensCaught++;
+
+ this.state="Caught chicken";
+
+ this.world.log(
+   "🐔 Somik #"+this.id+
+   " caught a chicken"
+ );
+}
+
+drink(){
+
+ if(this.outputs[12]<.3)return;
+
+ if(this.world.nearWater(this.x,this.y,17)){
+
+   this.water=Math.min(
+     C.MAX_WATER,
+     this.water+.18
+   );
+
+   this.state="Drinking";
+ }
+}
+
+shelter(){
+
+ let count=0;
+
+ const test=arr=>{
+
+   for(const o of arr){
+
+     if(
+       !o.carriedBy &&
+       distance(this.x,this.y,o.x,o.y)<34
+     ){
+       count++;
+     }
+   }
+ };
+
+ test(this.world.blocks);
+ test(this.world.wood);
+
+ return clamp(count/4,0,.8);
+}
+
+heatFactor(){
+
+ let best=0;
+
+ for(const h of this.world.heat){
+
+   const d=distance(this.x,this.y,h.x,h.y);
+
+   if(d<C.HEAT_RADIUS){
+     best=Math.max(
+       best,
+       1-d/C.HEAT_RADIUS
+     );
+   }
+ }
+
+ return best;
+}
+
+discoverHeat(){
+
+ // Purely fictional game heat mechanic.
+
+ if(this.outputs[11]<.78)return;
+ if(this.world.heat.length>=10)return;
+
+ let wood=null;
+ let mineral=null;
+
+ for(const r of this.world.wood){
+   if(!r.carriedBy&&distance(this.x,this.y,r.x,r.y)<17){
+     wood=r;break;
+   }
+ }
+
+ for(const r of this.world.minerals){
+   if(!r.carriedBy&&distance(this.x,this.y,r.x,r.y)<17){
+     mineral=r;break;
+   }
+ }
+
+ if(!wood||!mineral)return;
+
+ this.world.remove(this.world.wood,wood);
+ this.world.remove(this.world.minerals,mineral);
+
+ this.world.heat.push(
+   new Heat(this.x,this.y)
+ );
+
+ this.world.log(
+   "🔥 Game heat discovered near #"+this.id
+ );
+}
+
+transfer(){
+
+ // Generic object release near another Somik.
+ // No Help or Trade command.
+
+ if(!this.carrying)return;
+ if(this.outputs[11]<.5)return;
+
+ const other=this.nearest(
+   this.world.somiks,
+   s=>s!==this,
+   18
+ ).object;
+
+ if(!other||other.carrying)return;
+
+ if(chance(.025)){
+
+   other.carrying=this.carrying;
+   this.carrying.o.carriedBy=other;
+
+   this.carrying= null;
+
+   this.state="Transferred object";
+ }
+}
+
+disease(){
+
+ if(this.sick>0){
+
+   this.sick--;
+
+   this.health-=.00055*
+     (1-this.genome.diseaseResistance);
+
+   return;
+ }
+
+ for(const o of this.world.somiks){
+
+   if(o===this||o.sick<=0)continue;
+
+   if(distance(this.x,this.y,o.x,o.y)<24){
+
+     if(
+       chance(
+         .00010*
+         (1-this.genome.diseaseResistance)
+       )
+     ){
+       this.sick=rand(650,1500);
+
+       this.world.log(
+         "🦠 Somik #"+this.id+
+         " became sick"
+       );
+
+       break;
+     }
+   }
+ }
+}
+
+environment(){
+
+ let energyCost=C.LIFE_COST;
+
+ const shelter=this.shelter();
+ const heat=this.heatFactor();
+ const temp=this.world.temperature;
+
+ if(temp<8){
+
+   const cold=
+     (8-temp)*.000075*
+     (1-this.genome.coldResistance)*
+     (1-shelter)*
+     (1-heat*.75);
+
+   energyCost+=cold;
+ }
+
+ if(temp>30){
+
+   energyCost+=
+     (temp-30)*.00006*
+     (1-this.genome.heatResistance);
+ }
+
+ if(this.world.weather==="Storm"){
+   this.health-=.00025*(1-shelter);
+ }
+
+ if(this.world.dangerAt(this.x,this.y)>.5){
+   this.health-=.00015;
+ }
+
+ this.energy-=energyCost;
+
+ this.water-=C.WATER_LOSS;
+
+ if(this.water<20){
+   this.health-=.00035;
+ }
+
+ if(this.water<=0){
+   this.health-=.003;
+ }
+
+ // Trade-offs
+ this.energy-=this.genome.hidden*.0000035;
+ this.energy-=this.genome.vision*.0000004;
+
+ this.disease();
+
+ // Lifetime aging
+ if(this.age>this.genome.lifeSpan){
+   this.health-=.004;
+ }
+}
+
+lifetimeLearning(){
+
+ const change=this.energy-this.lastEnergy;
+
+ this.lastEnergy=this.energy;
+
+ if(Math.abs(change)<.01)return;
+
+ const reward=clamp(change/30,-1,1);
+
+ // Very small plasticity.
+ this.brain.learn(
+   Math.min(
+     this.brain.hidden,
+     this.brain.w2[0].length-2
+   ),
+   reward,
+   this.genome.learningRate
+ );
+
+ // long memory slowly records recent condition
+ this.longMemory[0]=
+   this.longMemory[0]*.995+
+   (this.energy/C.MAX_ENERGY)*.005;
+
+ this.longMemory[1]=
+   this.longMemory[1]*.995+
+   (this.water/C.MAX_WATER)*.005;
+
+ this.longMemory[2]=
+   this.longMemory[2]*.995+
+   (this.health/C.MAX_HEALTH)*.005;
+
+ this.longMemory[3]=
+   this.longMemory[3]*.995+
+   this.world.dangerAt(this.x,this.y)*.005;
+}
+
+act(){
+
+ this.state="Idle";
+
+ const mx=this.outputs[0];
+ const my=this.outputs[1];
+
+ const pick=this.outputs[2];
+ const drop=this.outputs[3];
+
+ const rest=this.outputs[4];
+ const move=this.outputs[5];
+
+ if(rest>.5&&rest>move){
+
+   this.prevX*=.8;
+   this.prevY*=.8;
+
+   this.energy-=.00005;
+
+   this.state="Resting";
+
+ }else if(move>-.45){
+
+   this.move(mx,my);
+ }
+
+ if(pick>.58&&pick>drop)this.pick();
+ if(drop>.58&&drop>pick)this.drop();
+
+ if(this.carrying){
+
+   this.energy-=C.CARRY_COST;
+
+   this.carrying.o.x=this.x;
+   this.carrying.o.y=this.y-16;
+ }
+
+ this.drink();
+ this.eatBerries();
+ this.interactChicken();
+ this.discoverHeat();
+ this.transfer();
+}
+
+findMate(){
+
+ let mate=null;
+ let best=45;
+
+ for(const o of this.world.somiks){
+
+   if(o===this)continue;
+   if(!o.adult())continue;
+   if(o.energy<C.REPRO_ENERGY*.7)continue;
+
+   const d=distance(this.x,this.y,o.x,o.y);
+
+   if(d<best){
+     best=d;
+     mate=o;
+   }
+ }
+
+ return mate;
+}
+
+reproduce(){
+
+ if(!this.adult())return;
+ if(this.energy<C.REPRO_ENERGY)return;
+ if(this.water<45)return;
+ if(this.health<55)return;
+ if(this.reproCooldown>0)return;
+
+ if(
+   this.world.somiks.length+
+   this.world.births.length>=C.MAX_POP
+ )return;
+
+ const mate=this.findMate();
+
+ // Sometimes one-parent inheritance remains possible.
+ const useMate=mate&&chance(.72);
+
+ const genome=
+   useMate
+   ?new Genome(this.genome,mate.genome)
+   :new Genome(this.genome);
+
+ const brain=
+   new Brain(
+     genome.hidden,
+     this.brain,
+     useMate?mate.brain:null
+   );
+
+ const p=this.world.landNear(this.x,this.y,35);
+ if(!p)return;
+
+ const generation=
+   Math.max(
+     this.generation,
+     useMate?mate.generation:0
+   )+1;
+
+ const baby=new Somik(
+   this.world,
+   p.x,p.y,
+   genome,
+   brain,
+   generation,
+   this.id,
+   useMate?mate.id:null,
+   this.founder
+ );
+
+ baby.energy=92;
+ baby.water=82;
+ baby.health=100;
+
+ this.energy-=C.REPRO_COST;
+ this.water-=15;
+
+ if(useMate){
+   mate.energy-=14;
+   mate.reproCooldown=C.REPRO_COOLDOWN*.6;
+ }
+
+ this.reproCooldown=C.REPRO_COOLDOWN;
+
+ this.children++;
+
+ if(useMate)mate.children++;
+
+ this.world.births.push(baby);
+ this.world.totalBirths++;
+ this.world.highestGeneration=Math.max(this.world.highestGeneration,generation);
+
+ this.world.family.push({
+   child:baby.id,
+   parentA:this.id,
+   parentB:useMate?mate.id:null,
+   generation
+ });
+
+ this.world.log(
+   "🧬 #"+baby.id+
+   " born • G"+generation
+ );
+}
+
+update(){
+
+ this.age++;
+
+ if(this.reproCooldown>0)this.reproCooldown--;
+
+ this.environment();
+ this.think();
+ this.act();
+ this.reproduce();
+ this.lifetimeLearning();
+}
+}
+
+// ============================================================
+// WORLD
+// ============================================================
+
+class World{
+
+constructor(){
+
+ this.nextID=1;
+ this.age=0;
+
+ this.somiks=[];
+ this.births=[];
+
+ this.chickens=[];
+ this.newChickens=[];
+
+ this.bushes=[];
+ this.seeds=[];
+ this.blocks=[];
+ this.trees=[];
+
+ this.wood=[];
+ this.stone=[];
+ this.minerals=[];
+
+ this.heat=[];
+
+ this.waters=[];
+ this.patches=[];
+
+ this.logs=[];
+ this.history=[];
+ this.family=[];
+
+ this.totalBirths=0;
+ this.totalDeaths=0;
+ this.peakPopulation=C.START_SOMIKS;
+ this.highestGeneration=1;
+ this.extinct=false;
+ this.extinctionAge=0;
+
+ this.selected=null;
+
+ this.weather="Clear";
+ this.weatherTimer=rand(C.WEATHER_MIN,C.WEATHER_MAX);
+
+ this.temperature=22;
+
+ this.flood=0;
+ this.drought=0;
+
+ this.chickenSpawn=rand(1500,3500);
+
+ this.makeMap();
+ this.populate();
+}
+
+makeMap(){
+
+ this.waters.push(
+   new Water(510,0,78,205),
+   new Water(494,175,110,205),
+   new Water(520,345,78,305),
+
+   new Water(95,400,165,100),
+   new Water(825,80,175,100),
+   new Water(850,480,120,80)
+ );
+
+ // Irregular terrain
+ this.patches.push(
+   new Patch(330,130,80,55,"mud",1.3),
+   new Patch(720,390,100,60,"mud",4.1),
+   new Patch(310,545,100,45,"sand",2.2),
+   new Patch(920,330,90,60,"sand",5.7),
+   new Patch(410,330,75,60,"hill",3.4),
+   new Patch(760,120,90,55,"hill",6.1)
+ );
+}
+
+baseWater(x,y,p=0){
+ return this.waters.some(w=>w.contains(x,y,p));
+}
+
+isWater(x,y,p=0){
+
+ if(this.baseWater(x,y,p))return true;
+
+ if(
+   this.flood>0 &&
+   x>470-p&&x<630+p
+ )return true;
+
+ return false;
+}
+
+nearWater(x,y,r){
+
+ for(const w of this.waters){
+
+   const nx=clamp(x,w.x,w.x+w.w);
+   const ny=clamp(y,w.y,w.y+w.h);
+
+   if(distance(x,y,nx,ny)<=r)return true;
+ }
+
+ return false;
+}
+
+waterProbe(s,angle,d){
+
+ const a=Math.atan2(s.fy,s.fx)+angle;
+
+ return this.isWater(
+   s.x+Math.cos(a)*d,
+   s.y+Math.sin(a)*d,
+   2
+ )?1:0;
+}
+
+terrainAt(x,y){
+
+ for(const p of this.patches){
+   if(p.contains(x,y))return p.type;
+ }
+
+ return"grass";
+}
+
+randomLand(p=20,side="any"){
+
+ for(let i=0;i<700;i++){
+
+   let min=p,max=C.W-p;
+
+   if(side==="west")max=465;
+   if(side==="east")min=635;
+
+   const x=rand(min,max);
+   const y=rand(p,C.H-p);
+
+   if(!this.isWater(x,y,p/2)){
+     return{x,y};
+   }
+ }
+
+ return{x:50,y:50};
+}
+
+landNear(x,y,r){
+
+ for(let i=0;i<60;i++){
+
+   const px=clamp(x+rand(-r,r),15,C.W-15);
+   const py=clamp(y+rand(-r,r),15,C.H-15);
+
+   if(!this.isWater(px,py,8)){
+     return{x:px,y:py};
+   }
+ }
+
+ return null;
+}
+
+populate(){
+
+ for(let i=0;i<C.START_BUSHES;i++){
+   const p=this.randomLand(22,chance(.7)?"west":"any");
+   this.bushes.push(new Bush(p.x,p.y));
+ }
+
+ for(let i=0;i<C.START_SEEDS;i++){
+   const p=this.randomLand();
+   this.seeds.push(new Seed(p.x,p.y));
+ }
+
+ for(let i=0;i<C.START_BLOCKS;i++){
+   const p=this.randomLand();
+   this.blocks.push(new Block(p.x,p.y));
+ }
+
+ for(let i=0;i<C.START_TREES;i++){
+   const p=this.randomLand();
+   this.trees.push(new Tree(p.x,p.y));
+ }
+
+ for(let i=0;i<C.START_WOOD;i++){
+   const p=this.randomLand();
+   this.wood.push(new Resource(p.x,p.y,"wood"));
+ }
+
+ for(let i=0;i<C.START_STONE;i++){
+   const p=this.randomLand(20,chance(.65)?"east":"any");
+   this.stone.push(new Resource(p.x,p.y,"stone"));
+ }
+
+ for(let i=0;i<C.START_MINERALS;i++){
+   const p=this.randomLand(20,"east");
+   this.minerals.push(new Resource(p.x,p.y,"mineral"));
+ }
+
+ for(let i=0;i<C.START_CHICKENS;i++){
+   const p=this.randomLand();
+   this.chickens.push(new Chicken(this,p.x,p.y));
+ }
+
+ for(let i=0;i<C.START_SOMIKS;i++){
+   const p=this.randomLand(22,"west");
+   this.somiks.push(new Somik(this,p.x,p.y));
+ }
+
+ this.log("🌍 Somik World V4.1 Balanced started");
+}
+
+timeFraction(){
+ return(this.age%C.DAY_LENGTH)/C.DAY_LENGTH;
+}
+
+hour(){
+ return(this.timeFraction()*24+6)%24;
+}
+
+day(){
+ return Math.floor(this.age/C.DAY_LENGTH)+1;
+}
+
+daylight(){
+
+ const h=this.hour();
+
+ if(h>=7&&h<=17)return 1;
+ if(h<5||h>=20)return 0;
+ if(h>=5&&h<7)return(h-5)/2;
+ return 1-(h-17)/3;
+}
+
+season(){
+ return["Spring","Summer","Autumn","Winter"][
+   Math.floor(this.age/C.SEASON_LENGTH)%4
+ ];
+}
+
+temperatureNormalized(){
+ return clamp((this.temperature+15)/55,0,1);
+}
+
+dangerAt(x,y){
+
+ let d=0;
+
+ const t=this.terrainAt(x,y);
+
+ if(t==="mud")d+=.1;
+ if(this.weather==="Storm")d+=.25;
+ if(this.flood>0&&this.nearWater(x,y,45))d+=.3;
+ if(this.temperature<1||this.temperature>37)d+=.2;
+
+ return clamp(d,0,1);
+}
+
+updateWeather(){
+
+ this.weatherTimer--;
+
+ if(this.flood>0)this.flood--;
+ if(this.drought>0)this.drought--;
+
+ if(this.weatherTimer<=0){
+
+   const r=Math.random();
+
+   if(r<.1){
+     this.weather="Storm";
+     if(chance(.3))this.flood=rand(400,900);
+
+   }else if(r<.34){
+     this.weather="Rain";
+
+   }else if(r<.46){
+     this.weather="Cold";
+
+   }else if(r<.58){
+     this.weather="Hot";
+
+   }else{
+     this.weather="Clear";
+   }
+
+   if(chance(.04)){
+     this.drought=rand(2500,5000);
+     this.log("☀️ Rare drought began");
+   }
+
+   this.weatherTimer=rand(C.WEATHER_MIN,C.WEATHER_MAX);
+
+   this.log("🌦 "+this.weather);
+ }
+
+ let target=11+this.daylight()*13;
+
+ const s=this.season();
+
+ if(s==="Summer")target+=7;
+ if(s==="Winter")target-=8;
+ if(s==="Autumn")target-=1;
+
+ if(this.weather==="Rain")target-=4;
+ if(this.weather==="Storm")target-=6;
+ if(this.weather==="Cold")target-=8;
+ if(this.weather==="Hot")target+=10;
+
+ this.temperature+=(target-this.temperature)*.002;
+}
+
+updatePlants(){
+
+ for(const b of this.bushes)b.update(this);
+ for(const t of this.trees)t.update(this);
+
+ for(let i=this.seeds.length-1;i>=0;i--){
+
+   const s=this.seeds[i];
+
+   if(s.carriedBy)continue;
+
+   s.age++;
+
+   let grow=C.SEED_GROW;
+
+   if(this.nearWater(s.x,s.y,85))grow*=.82;
+   if(this.weather==="Rain")grow*=.8;
+   if(this.season()==="Spring")grow*=.8;
+   if(this.drought>0)grow*=1.7;
+
+   if(s.age<grow)continue;
+   if(this.bushes.length>=C.MAX_BUSHES)continue;
+   if(this.isWater(s.x,s.y,7))continue;
+
+   let free=true;
+
+   for(const b of this.bushes){
+     if(distance(s.x,s.y,b.x,b.y)<25){
+       free=false;break;
+     }
+   }
+
+   if(free){
+     this.bushes.push(new Bush(s.x,s.y));
+     this.seeds.splice(i,1);
+   }
+ }
+}
+
+updateChickens(){
+
+ this.newChickens=[];
+
+ for(const c of this.chickens)c.update();
+
+ this.chickens.push(...this.newChickens);
+
+ this.chickenSpawn--;
+
+ if(
+   this.chickenSpawn<=0 &&
+   this.chickens.length<C.MAX_CHICKENS
+ ){
+   const p=this.randomLand();
+
+   this.chickens.push(
+     new Chicken(this,p.x,p.y)
+   );
+
+   this.chickenSpawn=rand(1800,4200);
+ }
+}
+
+updateHeat(){
+
+ for(let i=this.heat.length-1;i>=0;i--){
+
+   this.heat[i].update();
+
+   if(this.heat[i].life<=0){
+     this.heat.splice(i,1);
+   }
+ }
+}
+
+remove(arr,o){
+ const i=arr.indexOf(o);
+ if(i>=0)arr.splice(i,1);
+}
+
+berryCount(){
+ return this.bushes.reduce((a,b)=>a+b.berries,0);
+}
+
+log(text){
+ this.logs.unshift(text);
+ if(this.logs.length>60)this.logs.pop();
+}
+
+speciesFor(s){
+
+ // Display-only genetic grouping.
+ const g=s.genome;
+
+ const a=Math.floor(g.speed*3);
+ const b=Math.floor(g.vision/45);
+ const c=Math.floor(g.hidden/5);
+ const d=Math.floor(g.coldResistance*3);
+
+ return `${a}-${b}-${c}-${d}`;
+}
+
+speciesCount(){
+ return new Set(
+   this.somiks.map(s=>this.speciesFor(s))
+ ).size;
+}
+
+record(){
+
+ if(this.age%C.HISTORY_EVERY!==0)return;
+
+ let gen=1;
+ let health=0;
+
+ for(const s of this.somiks){
+   gen=Math.max(gen,s.generation);
+   health+=s.health;
+ }
+
+ this.history.push({
+   population:this.somiks.length,
+   generation:gen,
+   health:this.somiks.length?health/this.somiks.length:0
+ });
+
+ if(this.history.length>180)this.history.shift();
+}
+
+update(){
+
+ this.age++;
+
+ this.updateWeather();
+ this.updatePlants();
+ this.updateChickens();
+ this.updateHeat();
+
+ this.births=[];
+
+ for(let i=this.somiks.length-1;i>=0;i--){
+
+   const s=this.somiks[i];
+
+   s.update();
+
+   if(
+     s.health<=0 ||
+     s.energy<=0
+   ){
+
+     if(s.carrying){
+       s.carrying.o.carriedBy=null;
+       s.carrying.o.x=s.x;
+       s.carrying.o.y=s.y;
+     }
+
+     if(this.selected===s)this.selected=null;
+
+     this.log(
+       "💀 #"+s.id+
+       " died • G"+s.generation
+     );
+
+     this.somiks.splice(i,1);
+     this.totalDeaths++;
+   }
+ }
+
+ this.somiks.push(...this.births);
+ this.peakPopulation=Math.max(this.peakPopulation,this.somiks.length);
+ for(const s of this.somiks)this.highestGeneration=Math.max(this.highestGeneration,s.generation);
+
+ if(this.somiks.length===0&&!this.extinct){
+   this.extinct=true;
+   this.extinctionAge=this.age;
+   this.log("☠ EXTINCTION • highest generation "+this.highestGeneration);
+ }
+
+ this.record();
+}
+}
+
+// ============================================================
+// RENDERER
+// ============================================================
+
+class Renderer{
+
+constructor(canvas,world){
+ this.canvas=canvas;
+ this.ctx=canvas.getContext("2d");
+ this.world=world;
+ this.follow=false;
+}
+
+patch(p){
+
+ const c=this.ctx;
+
+ c.save();
+
+ c.translate(p.x,p.y);
+
+ c.fillStyle=
+   p.type==="mud"?"#66523988":
+   p.type==="sand"?"#d8bd7680":
+   "#6f946b70";
+
+ c.beginPath();
+
+ const points=40;
+
+ for(let i=0;i<=points;i++){
+
+   const a=i/points*Math.PI*2;
+
+   const wobble=
+     1+
+     Math.sin(a*3+p.seed)*.12+
+     Math.sin(a*7-p.seed)*.07;
+
+   const x=Math.cos(a)*p.rx*wobble;
+   const y=Math.sin(a)*p.ry*wobble;
+
+   if(i===0)c.moveTo(x,y);
+   else c.lineTo(x,y);
+ }
+
+ c.closePath();
+ c.fill();
+
+ c.restore();
+}
+
+ground(){
+
+ const c=this.ctx;
+
+ let base="#5cba6d";
+
+ if(this.world.season()==="Summer")base="#65b86a";
+ if(this.world.season()==="Autumn")base="#79ad63";
+ if(this.world.season()==="Winter")base="#91b197";
+
+ c.fillStyle=base;
+ c.fillRect(0,0,C.W,C.H);
+
+ for(let y=0;y<C.H;y+=40){
+   for(let x=0;x<C.W;x+=40){
+     c.fillStyle=((x/40+y/40)%2===0)?"#fff7":"#00400008";
+     c.globalAlpha=.05;
+     c.fillRect(x,y,40,40);
+   }
+ }
+
+ c.globalAlpha=1;
+
+ for(const p of this.world.patches)this.patch(p);
+}
+
+water(){
+
+ const c=this.ctx;
+
+ for(const w of this.world.waters){
+
+   c.fillStyle="#267b78";
+   c.fillRect(w.x-5,w.y-5,w.w+10,w.h+10);
+
+   c.fillStyle="#3caede";
+   c.fillRect(w.x,w.y,w.w,w.h);
+
+   c.strokeStyle="#d8f8ff55";
+
+   for(let y=w.y+20;y<w.y+w.h;y+=30){
+     for(let x=w.x+15;x<w.x+w.w;x+=45){
+       c.beginPath();
+       c.moveTo(x,y);
+       c.lineTo(x+10,y);
+       c.stroke();
+     }
+   }
+ }
+
+ if(this.world.flood>0){
+   c.fillStyle="#43aada20";
+   c.fillRect(470,0,160,C.H);
+ }
+}
+
+plants(){
+
+ const c=this.ctx;
+
+ for(const t of this.world.trees){
+
+   c.fillStyle="#75451f";
+   c.fillRect(t.x-3,t.y,6,14);
+
+   c.fillStyle="#268047";
+   c.beginPath();
+   c.arc(t.x,t.y-5,12,0,Math.PI*2);
+   c.fill();
+ }
+
+ const spots=[[-5,-2],[4,0],[0,-7],[-1,5],[7,-6]];
+
+ for(const b of this.world.bushes){
+
+   c.fillStyle="#267d42";
+   c.beginPath();
+   c.arc(b.x,b.y,11,0,Math.PI*2);
+   c.fill();
+
+   c.fillStyle="#7042c7";
+
+   for(let i=0;i<b.berries;i++){
+     c.beginPath();
+     c.arc(
+       b.x+spots[i][0],
+       b.y+spots[i][1],
+       2.4,0,Math.PI*2
+     );
+     c.fill();
+   }
+ }
+}
+
+objects(){
+
+ const c=this.ctx;
+
+ for(const s of this.world.seeds){
+   c.fillStyle="#f2d15a";
+   c.beginPath();
+   c.ellipse(s.x,s.y,4,2.5,.4,0,Math.PI*2);
+   c.fill();
+ }
+
+ for(const r of this.world.wood){
+   c.fillStyle="#8a5126";
+   c.fillRect(r.x-6,r.y-3,12,6);
+ }
+
+ for(const r of this.world.stone){
+   c.fillStyle="#858c90";
+   c.beginPath();
+   c.arc(r.x,r.y,6,0,Math.PI*2);
+   c.fill();
+ }
+
+ for(const r of this.world.minerals){
+   c.fillStyle="#6fe3df";
+   c.beginPath();
+   c.moveTo(r.x,r.y-8);
+   c.lineTo(r.x+6,r.y);
+   c.lineTo(r.x,r.y+8);
+   c.lineTo(r.x-6,r.y);
+   c.closePath();
+   c.fill();
+ }
+
+ for(const b of this.world.blocks){
+
+   const h=b.size/2;
+
+   c.fillStyle=
+     this.world.baseWater(b.x,b.y)
+     ?"#a0693e":"#d98343";
+
+   c.fillRect(b.x-h,b.y-h,b.size,b.size);
+
+   c.strokeStyle="#61391e";
+   c.strokeRect(b.x-h,b.y-h,b.size,b.size);
+ }
+}
+
+chickens(){
+
+ const c=this.ctx;
+
+ for(const q of this.world.chickens){
+
+   c.fillStyle="#f4f0dc";
+   c.beginPath();
+   c.arc(q.x,q.y,7,0,Math.PI*2);
+   c.fill();
+
+   c.fillStyle="#e9d64e";
+   c.beginPath();
+   c.moveTo(q.x+6,q.y);
+   c.lineTo(q.x+11,q.y+2);
+   c.lineTo(q.x+6,q.y+4);
+   c.fill();
+
+   c.fillStyle="#d74c3c";
+   c.beginPath();
+   c.arc(q.x-1,q.y-7,2.5,0,Math.PI*2);
+   c.fill();
+
+   c.fillStyle="#222";
+   c.beginPath();
+   c.arc(q.x+3,q.y-2,1,0,Math.PI*2);
+   c.fill();
+ }
+}
+
+heat(){
+
+ const c=this.ctx;
+
+ for(const h of this.world.heat){
+
+   c.fillStyle="#ffad2715";
+   c.beginPath();
+   c.arc(h.x,h.y,C.HEAT_RADIUS,0,Math.PI*2);
+   c.fill();
+
+   c.fillStyle="#ffad32";
+   c.beginPath();
+   c.arc(h.x,h.y,8,0,Math.PI*2);
+   c.fill();
+ }
+}
+
+lineage(id){
+ return `hsl(${(id*137.5)%360},70%,55%)`;
+}
+
+somiks(){
+
+ const c=this.ctx;
+
+ for(const s of this.world.somiks){
+
+   const r=s.adult()?10:8;
+
+   c.fillStyle="#0003";
+   c.beginPath();
+   c.ellipse(s.x,s.y+8,10,5,0,0,Math.PI*2);
+   c.fill();
+
+   c.fillStyle=
+     s.sick>0?"#6fae9b":
+     s.state==="Resting"?"#7193ba":
+     "#31a9dc";
+
+   c.beginPath();
+   c.arc(s.x,s.y,r,0,Math.PI*2);
+   c.fill();
+
+   c.strokeStyle=this.lineage(s.founder);
+   c.lineWidth=2;
+   c.stroke();
+   c.lineWidth=1;
+
+   c.fillStyle="#143548";
+   c.beginPath();
+   c.arc(s.x-3,s.y-1,1.2,0,Math.PI*2);
+   c.arc(s.x+3,s.y-1,1.2,0,Math.PI*2);
+   c.fill();
+
+   // energy
+   c.fillStyle="#1d3029";
+   c.fillRect(s.x-10,s.y-17,20,3);
+
+   c.fillStyle="#76ed70";
+   c.fillRect(
+     s.x-10,s.y-17,
+     20*clamp(s.energy/C.MAX_ENERGY,0,1),3
+   );
+
+   // health
+   c.fillStyle="#1d3029";
+   c.fillRect(s.x-10,s.y-13,20,2);
+
+   c.fillStyle="#ff7474";
+   c.fillRect(
+     s.x-10,s.y-13,
+     20*clamp(s.health/100,0,1),2
+   );
+ }
+
+ const s=this.world.selected;
+
+ if(s){
+
+   c.strokeStyle="#fff26b";
+   c.lineWidth=3;
+
+   c.beginPath();
+   c.arc(s.x,s.y,16,0,Math.PI*2);
+   c.stroke();
+
+   c.lineWidth=1;
+
+   c.fillStyle="#172819dd";
+   c.fillRect(s.x-43,s.y-47,86,18);
+
+   c.fillStyle="white";
+   c.textAlign="center";
+   c.font="10px Arial";
+
+   c.fillText(
+     "#"+s.id+" • G"+s.generation,
+     s.x,s.y-34
+   );
+ }
+}
+
+weather(){
+
+ const c=this.ctx;
+
+ if(
+   this.world.weather==="Rain"||
+   this.world.weather==="Storm"
+ ){
+
+   const n=this.world.weather==="Storm"?100:60;
+
+   c.strokeStyle="#ddf5ff66";
+
+   for(let i=0;i<n;i++){
+
+     const x=(i*83+this.world.age*2)%C.W;
+     const y=(i*47+this.world.age*4)%C.H;
+
+     c.beginPath();
+     c.moveTo(x,y);
+     c.lineTo(x-4,y+10);
+     c.stroke();
+   }
+ }
+
+ const dark=(1-this.world.daylight())*.55;
+
+ if(dark>0){
+
+   c.fillStyle=`rgba(5,14,45,${dark})`;
+   c.fillRect(0,0,C.W,C.H);
+ }
+}
+
+render(){
+
+ this.ground();
+ this.water();
+ this.plants();
+ this.objects();
+ this.chickens();
+ this.heat();
+ this.somiks();
+ this.weather();
+}
+}
+
+// ============================================================
+// UI
+// ============================================================
+
+class UI{
+
+constructor(world,canvas){
+
+ this.world=world;
+ this.canvas=canvas;
+
+ this.chart=document.getElementById("chart");
+ this.chartCtx=this.chart.getContext("2d");
+
+ this.brain=document.getElementById("brain");
+ this.brainCtx=this.brain.getContext("2d");
+
+ canvas.onclick=e=>this.select(e);
+}
+
+select(e){
+
+ const rect=this.canvas.getBoundingClientRect();
+
+ const x=(e.clientX-rect.left)*C.W/rect.width;
+ const y=(e.clientY-rect.top)*C.H/rect.height;
+
+ let best=null;
+ let d=25;
+
+ for(const s of this.world.somiks){
+
+   const sd=distance(x,y,s.x,s.y);
+
+   if(sd<d){
+     d=sd;
+     best=s;
+   }
+ }
+
+ this.world.selected=best;
+}
+
+brainViewer(){
+
+ const c=this.brainCtx;
+ const s=this.world.selected;
+
+ c.clearRect(0,0,320,120);
+
+ c.fillStyle="#13231a";
+ c.fillRect(0,0,320,120);
+
+ if(!s)return;
+
+ const hidden=s.hiddenActivity;
+
+ for(let i=0;i<hidden.length;i++){
+
+   const cols=10;
+
+   const x=25+(i%cols)*29;
+   const y=25+Math.floor(i/cols)*30;
+
+   const value=hidden[i]||0;
+
+   const light=Math.floor(35+Math.abs(value)*50);
+
+   c.fillStyle=
+     value>=0
+     ?`hsl(190,70%,${light}%)`
+     :`hsl(20,70%,${light}%)`;
+
+   c.beginPath();
+   c.arc(x,y,6,0,Math.PI*2);
+   c.fill();
+ }
+
+ c.fillStyle="#fff";
+ c.font="9px Arial";
+
+ c.fillText(
+   "Hidden neurons: "+s.genome.hidden,
+   5,112
+ );
+}
+
+chartViewer(){
+
+ const c=this.chartCtx;
+ const data=this.world.history;
+
+ c.clearRect(0,0,320,90);
+
+ c.fillStyle="#13231a";
+ c.fillRect(0,0,320,90);
+
+ if(data.length<2)return;
+
+ c.strokeStyle="#67ddff";
+ c.lineWidth=2;
+ c.beginPath();
+
+ data.forEach((d,i)=>{
+
+   const x=i/(data.length-1)*320;
+   const y=85-d.population/C.MAX_POP*75;
+
+   if(i===0)c.moveTo(x,y);
+   else c.lineTo(x,y);
+ });
+
+ c.stroke();
+
+ const maxGen=Math.max(
+   2,...data.map(x=>x.generation)
+ );
+
+ c.strokeStyle="#ffe36c";
+ c.beginPath();
+
+ data.forEach((d,i)=>{
+
+   const x=i/(data.length-1)*320;
+   const y=85-d.generation/maxGen*75;
+
+   if(i===0)c.moveTo(x,y);
+   else c.lineTo(x,y);
+ });
+
+ c.stroke();
+
+ c.lineWidth=1;
+}
+
+familyViewer(){
+
+ const el=document.getElementById("family");
+ const s=this.world.selected;
+
+ if(!s){
+   el.textContent="Select a Somik.";
+   return;
+ }
+
+ const children=this.world.family
+   .filter(f=>f.parentA===s.id||f.parentB===s.id)
+   .map(f=>"#"+f.child)
+   .slice(0,15);
+
+ el.innerHTML=`
+ <div class="row">Parent A: ${s.parentA?"#"+s.parentA:"Original"}</div>
+ <div class="row">Parent B: ${s.parentB?"#"+s.parentB:"—"}</div>
+ <div class="row">Founder: #${s.founder}</div>
+ <div class="row">Children: ${children.length?children.join(", "):"None recorded"}</div>
+ `;
+}
+
+inspector(){
+
+ const el=document.getElementById("inspect");
+ const s=this.world.selected;
+
+ if(!s){
+   el.textContent="No Somik selected.";
+   return;
+ }
+
+ el.innerHTML=`
+ <div class="row"><b>Somik #${s.id}</b></div>
+ <div class="row">Generation: ${s.generation}</div>
+ <div class="row">Species: ${this.world.speciesFor(s)}</div>
+ <div class="row">Stage: ${s.adult()?"Adult":"Young"}</div>
+ <div class="row">Age: ${(s.age/C.DAY_LENGTH).toFixed(2)} world days</div>
+ <div class="row">Inherited lifespan: ${(s.genome.lifeSpan/C.DAY_LENGTH).toFixed(2)} days</div>
+
+ <br>
+
+ <div class="row">❤️ Health: ${s.health.toFixed(1)}</div>
+ <div class="row">⚡ Energy: ${s.energy.toFixed(1)}</div>
+ <div class="row">💧 Water: ${s.water.toFixed(1)}</div>
+ <div class="row">🦠 Sick: ${s.sick>0?"Yes":"No"}</div>
+ <div class="row">State: ${s.state}</div>
+
+ <br><b>🧬 GENES</b>
+
+ <div class="row">Brain: ${s.genome.hidden}</div>
+ <div class="row">Vision: ${s.genome.vision.toFixed(0)}</div>
+ <div class="row">Speed: ${s.genome.speed.toFixed(2)}</div>
+ <div class="row">Smell: ${s.genome.smell.toFixed(0)}</div>
+ <div class="row">Cold resistance: ${s.genome.coldResistance.toFixed(2)}</div>
+ <div class="row">Heat resistance: ${s.genome.heatResistance.toFixed(2)}</div>
+ <div class="row">Disease resistance: ${s.genome.diseaseResistance.toFixed(2)}</div>
+ <div class="row">Learning: ${s.genome.learningRate.toFixed(4)}</div>
+
+ <br><b>🧠 MEMORY</b>
+
+ ${s.memory.map((m,i)=>
+   `<div class="row">Short ${i+1}: ${m.toFixed(2)}</div>`
+ ).join("")}
+
+ ${s.longMemory.map((m,i)=>
+   `<div class="row">Long ${i+1}: ${m.toFixed(2)}</div>`
+ ).join("")}
+
+ <br><b>📡 SIGNALS</b>
+
+ <div class="row">
+ Sent: ${s.signals.map(x=>x.toFixed(2)).join(" / ")}
+ </div>
+
+ <div class="row">
+ Heard: ${s.heard.map(x=>x.toFixed(2)).join(" / ")}
+ </div>
+
+ <br>
+
+ <div class="row">🐔 Chickens caught: ${s.chickensCaught}</div>
+ <div class="row">👶 Children: ${s.children}</div>
+ `;
+}
+
+update(){
+
+ const w=this.world;
+
+ let maxGen=1;
+ let health=0;
+ let energy=0;
+ let water=0;
+ let brain=0;
+ let sick=0;
+
+ for(const s of w.somiks){
+
+   maxGen=Math.max(maxGen,s.generation);
+
+   health+=s.health;
+   energy+=s.energy;
+   water+=s.water;
+   brain+=s.genome.hidden;
+
+   if(s.sick>0)sick++;
+ }
+
+ const n=w.somiks.length||1;
+
+ document.getElementById("pop").textContent=w.somiks.length;
+ document.getElementById("chickens").textContent=w.chickens.length;
+ document.getElementById("gen").textContent=maxGen;
+ document.getElementById("species").textContent=w.speciesCount();
+
+ document.getElementById("health").textContent=(health/n).toFixed(0);
+ document.getElementById("energy").textContent=(energy/n).toFixed(0);
+ document.getElementById("water").textContent=(water/n).toFixed(0);
+ document.getElementById("brainSize").textContent=(brain/n).toFixed(1);
+
+ document.getElementById("berries").textContent=w.berryCount();
+ document.getElementById("seeds").textContent=w.seeds.length;
+ document.getElementById("heat").textContent=w.heat.length;
+ document.getElementById("sick").textContent=sick;
+
+ document.getElementById("season").textContent=w.season();
+ document.getElementById("weather").textContent=w.weather;
+ document.getElementById("temp").textContent=w.temperature.toFixed(1)+"°";
+ document.getElementById("day").textContent=w.day();
+ document.getElementById("birthCount").textContent=w.totalBirths;
+ document.getElementById("deathCount").textContent=w.totalDeaths;
+ document.getElementById("peakPop").textContent=w.peakPopulation;
+ document.getElementById("highestGen").textContent=w.highestGeneration;
+
+ const ex=document.getElementById("extinction");
+ if(w.extinct){
+   ex.classList.add("show");
+   document.getElementById("extinctionInfo").innerHTML=`Highest generation: <b>${w.highestGeneration}</b><br>World day: <b>${w.day()}</b><br>Births: <b>${w.totalBirths}</b> • Deaths: <b>${w.totalDeaths}</b><br><small>Reload the page to start a new evolutionary experiment.</small>`;
+ }else ex.classList.remove("show");
+
+ document.getElementById("log").innerHTML=
+   w.logs.slice(0,10).map(x=>"• "+x).join("<br>");
+
+ this.inspector();
+ this.familyViewer();
+ this.chartViewer();
+ this.brainViewer();
+}
+}
+
+// ============================================================
+// START
+// ============================================================
+
+const canvas=document.getElementById("world");
+
+let world=new World();
+let renderer=new Renderer(canvas,world);
+let ui=new UI(world,canvas);
+
+let paused=false;
+let speed=1;
+let frame=0;
+let follow=false;
+
+document.getElementById("pause").onclick=()=>{
+
+ paused=!paused;
+
+ document.getElementById("pause").textContent=
+   paused?"Resume":"Pause";
+};
+
+document.querySelectorAll(".speed").forEach(b=>{
+
+ b.onclick=()=>{
+
+   speed=Number(b.dataset.speed);
+
+   document.querySelectorAll(".speed")
+     .forEach(x=>x.classList.remove("active"));
+
+   b.classList.add("active");
+ };
+});
+
+document.getElementById("follow").onclick=()=>{
+
+ follow=!follow;
+
+ document.getElementById("follow")
+   .classList.toggle("active",follow);
+};
+
+// ============================================================
+// SAVE / LOAD
+//
+// Save/Load preserves the evolutionary population.
+// ============================================================
+
+function saveWorld(){
+
+ const data={
+   age:world.age,
+   nextID:world.nextID,
+   weather:world.weather,
+   temperature:world.temperature,
+   family:world.family,
+   history:world.history,
+   totalBirths:world.totalBirths,
+   totalDeaths:world.totalDeaths,
+   peakPopulation:world.peakPopulation,
+   highestGeneration:world.highestGeneration,
+   extinct:world.extinct,
+
+   somiks:world.somiks.map(s=>({
+     id:s.id,
+     x:s.x,y:s.y,
+     generation:s.generation,
+     parentA:s.parentA,
+     parentB:s.parentB,
+     founder:s.founder,
+     energy:s.energy,
+     water:s.water,
+     health:s.health,
+     age:s.age,
+     children:s.children,
+     foodEaten:s.foodEaten,
+     chickensCaught:s.chickensCaught,
+     sick:s.sick,
+     memory:s.memory,
+     longMemory:s.longMemory,
+     genome:{...s.genome},
+     brain:{
+       hidden:s.brain.hidden,
+       w1:s.brain.w1,
+       w2:s.brain.w2
+     }
+   }))
+ };
+
+ localStorage.setItem(
+   "somik_v41",
+   JSON.stringify(data)
+ );
+
+ const lastSaveEl=document.getElementById("lastSave");
+ if(lastSaveEl){
+   lastSaveEl.textContent=new Date().toLocaleTimeString();
+ }
+
+ world.log("💾 Evolution saved");
+}
+
+document.getElementById("save").onclick=saveWorld;
+
+document.getElementById("load").onclick=()=>{
+
+ const raw=localStorage.getItem("somik_v41");
+
+ if(!raw){
+   world.log("⚠ No V4.1 save found");
+   return;
+ }
+
+ try{
+
+   const data=JSON.parse(raw);
+
+   const fresh=new World();
+
+   fresh.somiks=[];
+   fresh.age=data.age;
+   fresh.nextID=data.nextID;
+   fresh.weather=data.weather;
+   fresh.temperature=data.temperature;
+   fresh.family=data.family||[];
+   fresh.history=data.history||[];
+   fresh.totalBirths=data.totalBirths||0;
+   fresh.totalDeaths=data.totalDeaths||0;
+   fresh.peakPopulation=data.peakPopulation||0;
+   fresh.highestGeneration=data.highestGeneration||1;
+   fresh.extinct=!!data.extinct;
+
+   for(const d of data.somiks){
+
+     const g=new Genome();
+     Object.assign(g,d.genome);
+
+     const brain=new Brain(g.hidden);
+     brain.hidden=d.brain.hidden;
+     brain.w1=d.brain.w1;
+     brain.w2=d.brain.w2;
+
+     const s=new Somik(
+       fresh,
+       d.x,d.y,
+       g,brain,
+       d.generation,
+       d.parentA,
+       d.parentB,
+       d.founder
+     );
+
+     s.id=d.id;
+     s.energy=d.energy;
+     s.water=d.water;
+     s.health=d.health;
+     s.age=d.age;
+     s.children=d.children;
+     s.foodEaten=d.foodEaten;
+     s.chickensCaught=d.chickensCaught;
+     s.sick=d.sick;
+     s.memory=d.memory;
+     s.longMemory=d.longMemory;
+
+     fresh.somiks.push(s);
+   }
+
+   fresh.nextID=data.nextID;
+   world=fresh;
+   renderer=new Renderer(canvas,world);
+   ui=new UI(world,canvas);
+
+   world.log("📂 Evolution loaded");
+
+ }catch(err){
+
+   console.error(err);
+   world.log("⚠ Load failed");
+ }
+};
+
+// ============================================================
+// LOOP
+// ============================================================
+
+function loop(){
+
+ frame++;
+
+ if(!paused&&!world.extinct){
+
+   for(let i=0;i<speed;i++){
+     world.update();
+     if(world.extinct)break;
+   }
+ }
+
+ // Performance mode.
+ // At 100x, evolution gets CPU priority.
+ if(speed!==100||frame%4===0){
+   renderer.render();
+ }
+
+ if(frame%3===0){
+   ui.update();
+ }
+
+ requestAnimationFrame(loop);
+}
+
+// ============================================================
+// AUTO SAVE — every 5 real seconds
+// ============================================================
+
+setInterval(()=>{
+  try{
+    saveWorld();
+  }catch(err){
+    console.error("Auto save failed",err);
+    const el=document.getElementById("lastSave");
+    if(el)el.textContent="ERROR";
+  }
+},5000);
+
+// Extra save when the tab is hidden/closed/refreshed.
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="hidden"){
+    try{saveWorld();}catch(err){}
+  }
+});
+
+window.addEventListener("beforeunload",()=>{
+  try{saveWorld();}catch(err){}
+});
+
+loop();
+
+</script>
+</body>
+</html>
